@@ -24,6 +24,34 @@ class PcapInterface {
     struct bpf_program filter_;
 };
 
+// Struct that contains all keys and data that needs to persist between
+// packets.
+struct Wpa2SessionData {
+    // Default constructor initializes all members to 0.
+    Wpa2SessionData();
+
+    uint8_t pmk[32];
+
+    uint8_t sta_mac[6];
+    uint8_t ap_mac[6];
+
+    uint8_t sta_nonce[32];
+    uint8_t ap_nonce[32];
+
+    uint8_t key_descriptor;
+
+    union {
+        uint8_t bytes[80];
+        struct {
+            uint8_t kck[16];
+            uint8_t kek[16];
+            uint8_t tk[16];
+            uint8_t mic_tx[8];
+            uint8_t mic_rx[8];
+        } keys;
+    } ptk;
+};
+
 class Wpa2Sniffer {
   public:
     // Initializes a WPA2 sniffer to monitor access point <bssid> on interface
@@ -47,15 +75,31 @@ class Wpa2Sniffer {
 
   private:
     // Build the PCAP filter to only get data packets for our BSSID.
-    void SetBssidFilter();
+    void SetBssidFilter(const std::string& bssid);
 
     // Called by the PcapInterface when a packet is captured.
     void HandleCapturedPacket(const uint8_t* pkt, int len);
 
+    // Checks if the last 4 bytes of a captured packet are the FCS (Frame
+    // CheckSum). Some WiFi NICs add it, sometimes without adding the correct
+    // flag to the radiotap header (iwlwifi).
+    bool PacketHasFcs(const uint8_t* pkt, int len);
+
+    // Handles an EAPOL packet to synchronize with the WPA2 stream. pkt is an
+    // EAP packet, without 802.11 headers.
+    void HandleEapolPacket(const uint8_t* pkt, int len);
+
+    // Computes the PTK from the information we received in EAPOL packets + the
+    // PSK (from the command line).
+    void ComputePtk();
+
+    // Verifies the MIC of an EAPOL message.
+    bool CheckEapolMic(const uint8_t* pkt, int len, const uint8_t* mic);
+
     PcapInterface pcap_;
 
-    std::string bssid_;
-    std::string psk_;
+    bool synced_;
+    Wpa2SessionData wpa_;
 
     // { src_port, protocol_handler }
     std::map<uint16_t, ProtocolHandler*> handlers_;

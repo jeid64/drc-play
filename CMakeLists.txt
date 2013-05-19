@@ -8,7 +8,11 @@ add_definitions(-std=gnu++11 -Wall -Wextra)
 add_executable(drc-cap
                astrm.cc
                astrm.h
+               crc32.cc
+               crc32.h
                drc-cap.cc
+               polarssl-sha1.cc
+               polarssl-sha1.h
                protocol-handler.h
                vstrm.cc
                vstrm.h
