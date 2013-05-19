@@ -172,8 +172,13 @@ void Wpa2Sniffer::HandleCapturedPacket(const uint8_t* pkt, int len) {
         uint8_t* out = new uint8_t[4096];
         int out_len;
         if (!CcmpDecrypt(pkt, len, wpa_.ptk.keys.tk, out, &out_len)) {
-            fprintf(stderr, "error: failed to decrypt CCMP packet\n");
-            synced_ = false;
+            // Check if this is a broadcast packet (not supported yet)
+            if (memcmp(pkt + 4, "\xff\xff\xff\xff\xff\xff", 6) == 0) {
+                fprintf(stderr, "warn: failed to decrypt bcast packet\n");
+            } else {
+                fprintf(stderr, "error: failed to decrypt unicast packet\n");
+                synced_ = false;
+            }
         } else {
             // TODO(delroth): enqueue the data for further processing on
             // another thread.
