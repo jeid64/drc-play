@@ -1,6 +1,8 @@
 #ifndef __DRC_CAP_WPA2_SNIFFER_H_
 #define __DRC_CAP_WPA2_SNIFFER_H_
 
+#include "queue.h"
+
 #include <cstdint>
 #include <map>
 #include <memory>
@@ -52,6 +54,12 @@ struct Wpa2SessionData {
     } ptk;
 };
 
+struct Buffer {
+    Buffer* next;
+    uint8_t data[4096];
+    int length;
+};
+
 class Wpa2Sniffer {
   public:
     // Initializes a WPA2 sniffer to monitor access point <bssid> on interface
@@ -96,6 +104,10 @@ class Wpa2Sniffer {
     // Verifies the MIC of an EAPOL message.
     bool CheckEapolMic(const uint8_t* pkt, int len, const uint8_t* mic);
 
+    // Handles decrypted packets from the shared queue. Parses the LLC, IP and
+    // UDP headers to pass the contents to the right handler.
+    void HandleDecryptedPackets();
+
     PcapInterface pcap_;
 
     bool synced_;
@@ -103,6 +115,9 @@ class Wpa2Sniffer {
 
     // { src_port, protocol_handler }
     std::map<uint16_t, ProtocolHandler*> handlers_;
+
+    // Queue for consumer-producer data exchange.
+    LockedQueue<Buffer> queue_;
 };
 
 #endif

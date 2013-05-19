@@ -6,7 +6,7 @@
 
 class ProtocolHandler {
   public:
-    virtual void HandlePacket(const std::vector<uint8_t>& data) = 0;
+    virtual void HandlePacket(const uint8_t* data, int len) = 0;
 };
 
 #endif

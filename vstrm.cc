@@ -10,7 +10,7 @@ void VstrmProtocol::RegisterVideoHandler(VideoHandler* handler) {
     handlers_.push_back(handler);
 }
 
-void VstrmProtocol::HandlePacket(const std::vector<uint8_t>& data) {
+void VstrmProtocol::HandlePacket(const uint8_t* data, int len) {
     (void)data;
 }
 

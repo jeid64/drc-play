@@ -5,8 +5,10 @@
 #include "polarssl-sha1.h"
 #include "protocol-handler.h"
 
+#include <chrono>
 #include <cstdio>
 #include <cstring>
+#include <thread>
 
 #define TENDONIN
 
@@ -120,6 +122,8 @@ void Wpa2Sniffer::RegisterProtocolHandler(uint16_t port,
 }
 
 void Wpa2Sniffer::Sniff() {
+    std::thread th(&Wpa2Sniffer::HandleDecryptedPackets, this);
+
     pcap_.Loop([=](const uint8_t* pkt, int len) {
         this->HandleCapturedPacket(pkt, len);
     });
@@ -169,9 +173,10 @@ void Wpa2Sniffer::HandleCapturedPacket(const uint8_t* pkt, int len) {
             return;
         }
 
-        uint8_t* out = new uint8_t[4096];
-        int out_len;
-        if (!CcmpDecrypt(pkt, len, wpa_.ptk.keys.tk, out, &out_len)) {
+
+        Buffer* buf = new Buffer;
+        if (!CcmpDecrypt(pkt, len, wpa_.ptk.keys.tk, buf->data,
+                         &buf->length)) {
             // Check if this is a broadcast packet (not supported yet)
             if (memcmp(pkt + 4, "\xff\xff\xff\xff\xff\xff", 6) == 0) {
                 fprintf(stderr, "warn: failed to decrypt bcast packet\n");
@@ -180,10 +185,8 @@ void Wpa2Sniffer::HandleCapturedPacket(const uint8_t* pkt, int len) {
                 synced_ = false;
             }
         } else {
-            // TODO(delroth): enqueue the data for further processing on
-            // another thread.
+            queue_.Push(buf);
         }
-        delete[] out;
     } else {
         // Try to find the EAPOL packets that contain the key exchange. Their
         // LLC type (u16_be @ 0x20) is 0x888e.
@@ -327,4 +330,28 @@ bool Wpa2Sniffer::CheckEapolMic(const uint8_t* pkt, int len,
     sha1_hmac(wpa_.ptk.keys.kck, 16, pkt, len, computed_mic);
 
     return memcmp(computed_mic, mic, 16) == 0;
+}
+
+void Wpa2Sniffer::HandleDecryptedPackets() {
+    Buffer* buf;
+    while (true) {
+        while ((buf = queue_.Pop()) == nullptr) {
+            std::chrono::milliseconds dura(1);
+            std::this_thread::sleep_for(dura);
+        }
+
+        if (buf->length >= 0x24 &&   // Enough space for LLC/IP/UDP headers
+            buf->data[6] == 0x08 && buf->data[7] == 0x00 && // LLC->IP
+            buf->data[17] == 0x11) { // IP->UDP
+            uint16_t dst_port = (buf->data[30] << 8) | buf->data[31];
+            const uint8_t* udp_data = buf->data + 0x24;
+            int udp_len = buf->length - 0x24;
+            if (handlers_.find(dst_port) != handlers_.end()) {
+                ProtocolHandler* h = handlers_[dst_port];
+                h->HandlePacket(udp_data, udp_len);
+            }
+        }
+
+        delete buf;
+    }
 }

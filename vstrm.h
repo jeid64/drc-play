@@ -26,7 +26,7 @@ class VstrmProtocol : public ProtocolHandler {
     virtual ~VstrmProtocol();
 
     void RegisterVideoHandler(VideoHandler* handler);
-    void HandlePacket(const std::vector<uint8_t>& data);
+    void HandlePacket(const uint8_t* data, int len);
 
   private:
     void SendVideoFrame(const std::vector<VideoPixel>& pixels, int width);

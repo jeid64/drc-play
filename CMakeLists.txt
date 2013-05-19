@@ -18,6 +18,7 @@ add_executable(drc-cap
                polarssl-sha1.cc
                polarssl-sha1.h
                protocol-handler.h
+               queue.h
                vstrm.cc
                vstrm.h
                wpa2-sniffer.cc
