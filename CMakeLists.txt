@@ -17,6 +17,8 @@ add_executable(drc-cap
                polarssl-aes.h
                polarssl-sha1.cc
                polarssl-sha1.h
+               portaudio-handler.cc
+               portaudio-handler.h
                protocol-handler.h
                queue.h
                vstrm.cc
@@ -26,4 +28,8 @@ add_executable(drc-cap
 
 find_package(PCAP REQUIRED)
 include_directories(${PCAP_INCLUDE_DIR})
-target_link_libraries(drc-cap ${PCAP_LIBRARY})
+
+find_package(Portaudio REQUIRED)
+include_directories(${PORTAUDIO_INCLUDE_DIRS})
+
+target_link_libraries(drc-cap ${PCAP_LIBRARY} ${PORTAUDIO_LIBRARIES})

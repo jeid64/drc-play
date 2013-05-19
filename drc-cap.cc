@@ -1,5 +1,6 @@
 #include "astrm.h"
 #include "vstrm.h"
+#include "portaudio-handler.h"
 #include "wpa2-sniffer.h"
 
 #include <string>
@@ -16,6 +17,9 @@ int main(int argc, char** argv) {
 
     VstrmProtocol vstrm;
     AstrmProtocol astrm;
+
+    PortaudioHandler portaudio;
+    astrm.RegisterAudioHandler(&portaudio);
 
     Wpa2Sniffer sniffer(iface, bssid, psk);
     sniffer.RegisterProtocolHandler(kDrcVstrmPort, &vstrm);

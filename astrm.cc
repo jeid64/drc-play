@@ -16,7 +16,7 @@ void AstrmProtocol::RegisterAudioHandler(AudioHandler* handler) {
 
 void AstrmProtocol::HandlePacket(const uint8_t* data, int len) {
     int format = data[0] >> 5;
-    bool stereo = (data[0] >> 4) & 1;
+    bool mono = (data[0] >> 4) & 1;
     bool vibrate = (data[0] >> 3) & 1;
     int packet_type = (data[0] >> 2) & 1;
     int seq_id = ((data[0] & 3) << 8) | data[1];
@@ -29,11 +29,11 @@ void AstrmProtocol::HandlePacket(const uint8_t* data, int len) {
         return;
     }
 
-    if (format != 0) { // TODO(delroth): support more than PCM 48KHz
+    if (format != 1) { // TODO(delroth): support more than PCM 48KHz
         return;
     }
 
-    if (!stereo) { // TODO(delroth): support mono sound
+    if (mono) { // TODO(delroth): support mono sound
         return;
     }
 
