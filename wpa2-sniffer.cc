@@ -1,5 +1,6 @@
 #include "wpa2-sniffer.h"
 
+#include "ccmp.h"
 #include "crc32.h"
 #include "polarssl-sha1.h"
 #include "protocol-handler.h"
@@ -168,12 +169,16 @@ void Wpa2Sniffer::HandleCapturedPacket(const uint8_t* pkt, int len) {
             return;
         }
 
-        // QoS packets have 2 additional bytes in the 802.11 header. Check for
-        // them explicitly.
-        bool is_qos = (pkt[0] & 0xf0) == 0x80;
-
-        // TODO
-        (void)is_qos;
+        uint8_t* out = new uint8_t[4096];
+        int out_len;
+        if (!CcmpDecrypt(pkt, len, wpa_.ptk.keys.tk, out, &out_len)) {
+            fprintf(stderr, "error: failed to decrypt CCMP packet\n");
+            synced_ = false;
+        } else {
+            // TODO(delroth): enqueue the data for further processing on
+            // another thread.
+        }
+        delete[] out;
     } else {
         // Try to find the EAPOL packets that contain the key exchange. Their
         // LLC type (u16_be @ 0x20) is 0x888e.
