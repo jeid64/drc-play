@@ -122,7 +122,7 @@ void VstrmProtocol::HandlePacket(const uint8_t* data, int len) {
     }
 
     if (!CheckSequenceId(seq_id)) {
-        //return;
+        curr_frame_->broken = true;
     }
 
     // Check the extended header for the IDR option.
@@ -130,13 +130,18 @@ void VstrmProtocol::HandlePacket(const uint8_t* data, int len) {
     for (int i = 8; i < 16; ++i) {
         if (data[i] == 0x80) {
             curr_frame_->is_idr = true;
+            printf("Got IDR!\n");
             break;
         }
     }
 
     curr_frame_->data.insert(curr_frame_->data.end(), data + 16, data + len);
     if (frame_end) {
-        queue_.Push(curr_frame_);
+        if (!curr_frame_->broken) {
+            queue_.Push(curr_frame_);
+        } else {
+            delete curr_frame_;
+        }
         curr_frame_ = new FrameBuffer;
     }
 }

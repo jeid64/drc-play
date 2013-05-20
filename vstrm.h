@@ -26,7 +26,10 @@ class VideoHandler {
 struct FrameBuffer {
     FrameBuffer* next;
     bool is_idr;
+    bool broken;
     std::vector<uint8_t> data;
+
+    FrameBuffer() : next(nullptr), is_idr(false), broken(false) {}
 };
 
 class H264Decoder;
