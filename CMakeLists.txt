@@ -21,6 +21,8 @@ add_executable(drc-cap
                portaudio-handler.h
                protocol-handler.h
                queue.h
+               sdl-handler.cc
+               sdl-handler.h
                vstrm.cc
                vstrm.h
                wpa2-sniffer.cc
@@ -32,4 +34,13 @@ include_directories(${PCAP_INCLUDE_DIR})
 find_package(Portaudio REQUIRED)
 include_directories(${PORTAUDIO_INCLUDE_DIRS})
 
-target_link_libraries(drc-cap ${PCAP_LIBRARY} ${PORTAUDIO_LIBRARIES})
+find_package(FFmpeg REQUIRED)
+include_directories(${FFMPEG_INCLUDE_DIR})
+
+find_package(SDL REQUIRED)
+include_directories(${SDL_INCLUDE_DIR})
+
+target_link_libraries(drc-cap ${PCAP_LIBRARY} ${PORTAUDIO_LIBRARIES}
+                              ${FFMPEG_LIBAVCODEC_LIBRARIES}
+                              ${FFMPEG_LIBSWSCALE_LIBRARIES}
+                              ${SDL_LIBRARY})

@@ -15,6 +15,10 @@ void AstrmProtocol::RegisterAudioHandler(AudioHandler* handler) {
 }
 
 void AstrmProtocol::HandlePacket(const uint8_t* data, int len) {
+    if (len < 8) {
+        return;
+    }
+
     int format = data[0] >> 5;
     bool mono = (data[0] >> 4) & 1;
     bool vibrate = (data[0] >> 3) & 1;

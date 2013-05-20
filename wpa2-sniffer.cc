@@ -91,6 +91,10 @@ void PcapInterface::Loop(CallbackType callback) {
     }
 }
 
+void PcapInterface::GetStats(pcap_stat* st) {
+    pcap_stats(pcap_, st);
+}
+
 Wpa2Sniffer::Wpa2Sniffer(const std::string& iface,
                          const std::string& bssid,
                          const std::string& psk)
@@ -148,6 +152,16 @@ void Wpa2Sniffer::HandleCapturedPacket(const uint8_t* pkt, int len) {
     // needed.
     if (PacketHasFcs(pkt, len)) {
         len -= 4;
+    }
+
+    static int i = 0;
+    if (++i == 10000) {
+        i = 0;
+        pcap_stat st;
+        pcap_.GetStats(&st);
+
+        printf("Stats: %d recv, %d drop, %d ifdrop\n", st.ps_recv,
+               st.ps_drop, st.ps_ifdrop);
     }
 
     // Skip the Radiotap header, we won't need it anymore.
@@ -336,7 +350,7 @@ void Wpa2Sniffer::HandleDecryptedPackets() {
     Buffer* buf;
     while (true) {
         while ((buf = queue_.Pop()) == nullptr) {
-            std::chrono::milliseconds dura(1);
+            std::chrono::microseconds dura(50);
             std::this_thread::sleep_for(dura);
         }
 

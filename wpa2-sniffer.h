@@ -21,6 +21,8 @@ class PcapInterface {
     typedef std::function<void(const uint8_t*, int)> CallbackType;
     void Loop(CallbackType callback);
 
+    void GetStats(pcap_stat* st);
+
   private:
     pcap_t* pcap_;
     struct bpf_program filter_;
