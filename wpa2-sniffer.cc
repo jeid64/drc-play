@@ -95,6 +95,12 @@ void PcapInterface::GetStats(pcap_stat* st) {
     pcap_stats(pcap_, st);
 }
 
+void PcapInterface::SendPacket(const uint8_t* pkt, int len) {
+    if (pcap_sendpacket(pcap_, pkt, len) != 0) {
+        fprintf(stderr, "error: failed to send packet\n");
+    }
+}
+
 Wpa2Sniffer::Wpa2Sniffer(const std::string& iface,
                          const std::string& bssid,
                          const std::string& psk)
@@ -368,4 +374,75 @@ void Wpa2Sniffer::HandleDecryptedPackets() {
 
         delete buf;
     }
+}
+
+void Wpa2Sniffer::InjectPacket(PacketInjector::Direction dir,
+                               const uint8_t* ip_pkt, int ip_len) {
+    // TODO:
+    //   - Build radiotap and 802.11 header
+    //   - Add LLC header
+    //   - CCMP encrypt the packet
+    //   - pcap_sendpacket
+
+    uint8_t radiotap_hdr[] = {
+        0x00, // Radiotap version
+        0x00, // Padding
+        0x00, 0x00, // Radiotap header length, filled later
+        0x04, 0x00, 0x00, 0x00, // Flags: only Channel info
+
+        // Channel extensions
+        0x3c, 0x14, // Channel 36: 5180MHz
+        0x40, 0x01, // Flags: uses OFDM and is on 5GHz
+    };
+
+    // Set the Radiotap header length
+    radiotap_hdr[2] = (sizeof (radiotap_hdr)) & 0xFF;
+    radiotap_hdr[3] = (sizeof (radiotap_hdr)) >> 8;
+
+    // 802.11 header
+    uint8_t wlan_hdr[] = {
+        0x88, // Type/Subtype: Data/QoS
+        0x42, // Flags: From DS and Protected
+        0x2c, 0x00, // Duration (44 microseconds)
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Dest Addr (memcpied later)
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // BSSID (memcpied later)
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Source Addr (memcpied later)
+        0x00, 0x00, // Fragment 0, sequence number 0
+        0x05, 0x00, // QoS: priority video
+    };
+
+    // Copy addresses
+    uint8_t* src_addr = (dir == PacketInjector::STA_TO_AP) ? wpa_.sta_mac
+                            : wpa_.ap_mac;
+    uint8_t* dst_addr = (dir == PacketInjector::STA_TO_AP) ? wpa_.ap_mac
+                            : wpa_.sta_mac;
+    memcpy(&wlan_hdr[4], dst_addr, 6);
+    memcpy(&wlan_hdr[10], wpa_.ap_mac, 6);
+    memcpy(&wlan_hdr[16], src_addr, 6);
+
+    // LLC header
+    uint8_t llc_hdr[] = {
+        0xaa, 0xaa, // Magic
+        0x03, // Unnumbered
+        0x00, 0x00, 0x00, // Encapsulated Ethernet
+        0x08, 0x00, // Type: IP
+    };
+
+    uint8_t packet[4096];
+    memcpy(packet, radiotap_hdr, sizeof (radiotap_hdr));
+    uint8_t* real_packet = &packet[sizeof (radiotap_hdr)];
+    int real_packet_len = sizeof (wlan_hdr) + sizeof (llc_hdr) + ip_len;
+    memcpy(real_packet, wlan_hdr, sizeof (wlan_hdr));
+    memcpy(real_packet + sizeof (wlan_hdr), llc_hdr, sizeof (llc_hdr));
+    memcpy(real_packet + sizeof (wlan_hdr) + sizeof (llc_hdr), ip_pkt, ip_len);
+
+    uint8_t encrypted[4096];
+    int encrypted_len;
+    CcmpEncrypt(real_packet, real_packet_len, wpa_.ptk.keys.tk, encrypted,
+                &encrypted_len);
+
+    memcpy(real_packet, encrypted, encrypted_len);
+
+    // TODO: uncomment when we can figure out how to make this work.
+    //pcap_.SendPacket(packet, encrypted_len + sizeof (radiotap_hdr));
 }

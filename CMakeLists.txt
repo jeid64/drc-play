@@ -10,9 +10,12 @@ add_executable(drc-cap
                astrm.h
                ccmp.cc
                ccmp.h
+               cmd.cc
+               cmd.h
                crc32.cc
                crc32.h
                drc-cap.cc
+               packet-injector.h
                polarssl-aes.cc
                polarssl-aes.h
                polarssl-sha1.cc

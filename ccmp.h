@@ -6,4 +6,7 @@
 bool CcmpDecrypt(const uint8_t* pkt, int len, const uint8_t* tk, uint8_t* out,
                  int* out_len);
 
+void CcmpEncrypt(const uint8_t* pkt, int len, const uint8_t* tk, uint8_t* out,
+                 int* out_len);
+
 #endif

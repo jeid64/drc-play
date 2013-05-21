@@ -82,6 +82,7 @@ VstrmProtocol::VstrmProtocol()
     , expected_seq_id_(-1)
     , curr_frame_(new FrameBuffer)
     , h264decoder_(new H264Decoder)
+    , injector_(nullptr)
     , decoding_th_(&VstrmProtocol::HandleEncodedFrames, this) {
 }
 
@@ -90,6 +91,10 @@ VstrmProtocol::~VstrmProtocol() {
 
 void VstrmProtocol::RegisterVideoHandler(VideoHandler* handler) {
     handlers_.push_back(handler);
+}
+
+void VstrmProtocol::SetPacketInjector(PacketInjector* injector) {
+    injector_ = injector;
 }
 
 void VstrmProtocol::HandlePacket(const uint8_t* data, int len) {
@@ -123,6 +128,7 @@ void VstrmProtocol::HandlePacket(const uint8_t* data, int len) {
 
     if (!CheckSequenceId(seq_id)) {
         curr_frame_->broken = true;
+        RequestIFrame();
     }
 
     // Check the extended header for the IDR option.
@@ -224,5 +230,48 @@ void VstrmProtocol::EncapsulateH264(const FrameBuffer* frame,
             out.push_back(3);
         }
         out.push_back(frame->data[i]);
+    }
+}
+
+void VstrmProtocol::RequestIFrame() {
+    uint8_t ip_packet[] = {
+        // IPv4 header
+        0x45, // IPv4 and header size == 5 * 32b
+        0x00, // DSCP: default
+        0x00, 0x20, // Packet length (20 + 8 + 4)
+        0x00, 0x00, // Identifier
+        0x00, 0x00, // Flags and fragment offset
+        0x40, // TTL
+        0x11, // Protocol = UDP
+        0x00, 0x00, // Checksum: computed later
+        0xc0, 0xa8, 0x01, 0x0b, // Source: 192.168.1.11
+        0xc0, 0xa8, 0x01, 0x0a, // Destination: 192.168.1.10
+
+        // UDP header
+        0xc3, 0xbe, // Source port: 50110
+        0xc3, 0x5a, // Destination port: 50010
+        0x00, 0x0c, // Packet length (8 + 4)
+        0x00, 0x00, // Checksum (none)
+
+        // Data: sync message
+        0x01, 0x00, 0x00, 0x00,
+    };
+
+    // Compute the IP checksum
+    uint32_t checksum = 0;
+    for (int i = 0; i < 10; ++i) {
+        checksum += (ip_packet[2 * i] << 8) | ip_packet[2 * i + 1];
+    }
+    checksum = (checksum >> 16) + (checksum & 0xFFFF);
+    checksum = ~checksum & 0xFFFF;
+    ip_packet[10] = checksum >> 8;
+    ip_packet[11] = checksum & 0xFF;
+
+    // Send to our packet injector if it is set.
+    if (injector_) {
+        injector_->InjectPacket(PacketInjector::STA_TO_AP, ip_packet,
+                                sizeof (ip_packet));
+    } else {
+        fprintf(stderr, "warn: cannot inject, injector not set in vstrm\n");
     }
 }

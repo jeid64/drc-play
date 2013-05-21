@@ -1,6 +1,7 @@
 #ifndef __DRC_CAP_WPA2_SNIFFER_H_
 #define __DRC_CAP_WPA2_SNIFFER_H_
 
+#include "packet-injector.h"
 #include "queue.h"
 
 #include <cstdint>
@@ -22,6 +23,8 @@ class PcapInterface {
     void Loop(CallbackType callback);
 
     void GetStats(pcap_stat* st);
+
+    void SendPacket(const uint8_t* buffer, int len);
 
   private:
     pcap_t* pcap_;
@@ -62,7 +65,7 @@ struct Buffer {
     int length;
 };
 
-class Wpa2Sniffer {
+class Wpa2Sniffer : public PacketInjector {
   public:
     // Initializes a WPA2 sniffer to monitor access point <bssid> on interface
     // <iface>. The PSK used by the WPA2 network is specified by <psk>.
@@ -82,6 +85,10 @@ class Wpa2Sniffer {
     // Starts sniffing. Runs "forever", stops only when we were desynced for
     // some reason.
     void Sniff();
+
+    // From PacketInjector: injects an IP packet in the WPA2 session.
+    virtual void InjectPacket(PacketInjector::Direction dir,
+                              const uint8_t* ip_pkt, int len);
 
   private:
     // Build the PCAP filter to only get data packets for our BSSID.

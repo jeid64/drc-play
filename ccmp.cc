@@ -4,10 +4,30 @@
 
 #include <cstring>
 
+#define CHECK_CCMP_ENCRYPTION
+
 static void xor_block(uint8_t* dst, const uint8_t* key, int len) {
     while (len--) {
         *dst++ ^= *key++;
     }
+}
+
+// Build the Associated Authenticated Data, which is MIC-validated. It contains
+// basically the whole 802.11 header, with some fields masked.
+static void BuildAAD(const uint8_t* pkt, uint8_t* aad) {
+    bool is_qos = (pkt[0] & 0xf0) == 0x80;
+    uint8_t data[32] = {
+        0x00, (uint8_t)(is_qos ? 24 : 22), // AAD length
+        (uint8_t)(pkt[0] & 0x8f), (uint8_t)(pkt[1] & 0xc7),
+        pkt[4], pkt[5], pkt[6], pkt[7], pkt[8], pkt[9], // dest addr
+        pkt[10], pkt[11], pkt[12], pkt[13], pkt[14], pkt[15], // bssid
+        pkt[16], pkt[17], pkt[18], pkt[19], pkt[20], pkt[21], // source addr
+        (uint8_t)(pkt[22] & 0x0F), 0x00,
+        (uint8_t)(is_qos ? pkt[24] & 0x0f : 0x00), 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+    };
+
+    memcpy(aad, data, 32);
 }
 
 bool CcmpDecrypt(const uint8_t* pkt, int len, const uint8_t* tk, uint8_t* out,
@@ -30,23 +50,14 @@ bool CcmpDecrypt(const uint8_t* pkt, int len, const uint8_t* tk, uint8_t* out,
     uint8_t ib[16] = {
         0x59,
         (uint8_t)(is_qos ? pkt[24] & 0x0f : 0x00),
-        pkt[10], pkt[11], pkt[12], pkt[13], pkt[14], pkt[15], // src addr
+        pkt[10], pkt[11], pkt[12], pkt[13], pkt[14], pkt[15], // bssid
         ccmp_pkt[7], ccmp_pkt[6], ccmp_pkt[5],
         ccmp_pkt[4], ccmp_pkt[1], ccmp_pkt[0],
         (uint8_t)(data_len >> 8), (uint8_t)(data_len & 0xFF)
     };
 
-    // Associated Authenticated Data
-    uint8_t aad[32] = {
-        0x00, (uint8_t)(is_qos ? 24 : 22),
-        (uint8_t)(pkt[0] & 0x8f), (uint8_t)(pkt[1] & 0xc7),
-        pkt[4], pkt[5], pkt[6], pkt[7], pkt[8], pkt[9], // bssid
-        pkt[10], pkt[11], pkt[12], pkt[13], pkt[14], pkt[15], // src addr
-        pkt[16], pkt[17], pkt[18], pkt[19], pkt[20], pkt[21], // dst addr
-        (uint8_t)(pkt[22] & 0x0F), 0x00,
-        (uint8_t)(is_qos ? pkt[24] & 0x0f : 0x00), 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-    };
+    uint8_t aad[32];
+    BuildAAD(pkt, aad);
 
     aes_crypt_ecb(&aes, AES_ENCRYPT, ib, computed_mic);
     xor_block(computed_mic, aad, 16);
@@ -88,4 +99,14 @@ bool CcmpDecrypt(const uint8_t* pkt, int len, const uint8_t* tk, uint8_t* out,
     }
 
     return memcmp(mic, computed_mic, 8) == 0;
+}
+
+void CcmpEncrypt(const uint8_t* pkt, int len, const uint8_t* tk, uint8_t* out,
+                 int* out_len) {
+    // TODO
+    (void)pkt;
+    (void)len;
+    (void)tk;
+    (void)out;
+    (void)out_len;
 }
