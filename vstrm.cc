@@ -87,6 +87,10 @@ VstrmProtocol::VstrmProtocol()
 }
 
 VstrmProtocol::~VstrmProtocol() {
+    FrameBuffer* frame = new FrameBuffer;
+    frame->stop_signal = true;
+    queue_.Push(frame);
+    decoding_th_.join();
 }
 
 void VstrmProtocol::RegisterVideoHandler(VideoHandler* handler) {
@@ -177,6 +181,11 @@ void VstrmProtocol::HandleEncodedFrames() {
         while ((fr = queue_.Pop()) == nullptr) {
             std::chrono::microseconds dura(50);
             std::this_thread::sleep_for(dura);
+        }
+
+        if (fr->stop_signal) {
+            delete fr;
+            return;
         }
 
         std::vector<uint8_t> nal_encapsulated;

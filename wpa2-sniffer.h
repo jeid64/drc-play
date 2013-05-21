@@ -21,6 +21,7 @@ class PcapInterface {
 
     typedef std::function<void(const uint8_t*, int)> CallbackType;
     void Loop(CallbackType callback);
+    void BreakLoop();
 
     void GetStats(pcap_stat* st);
 
@@ -85,6 +86,9 @@ class Wpa2Sniffer : public PacketInjector {
     // Starts sniffing. Runs "forever", stops only when we were desynced for
     // some reason.
     void Sniff();
+
+    // Stops sniffing.
+    void Stop();
 
     // From PacketInjector: injects an IP packet in the WPA2 session.
     virtual void InjectPacket(PacketInjector::Direction dir,

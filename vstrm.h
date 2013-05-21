@@ -28,9 +28,11 @@ struct FrameBuffer {
     FrameBuffer* next;
     bool is_idr;
     bool broken;
+    bool stop_signal;
     std::vector<uint8_t> data;
 
-    FrameBuffer() : next(nullptr), is_idr(false), broken(false) {}
+    FrameBuffer() : next(nullptr), is_idr(false), broken(false),
+                    stop_signal(false) {}
 };
 
 class H264Decoder;

@@ -91,6 +91,10 @@ void PcapInterface::Loop(CallbackType callback) {
     }
 }
 
+void PcapInterface::BreakLoop() {
+    pcap_breakloop(pcap_);
+}
+
 void PcapInterface::GetStats(pcap_stat* st) {
     pcap_stats(pcap_, st);
 }
@@ -137,6 +141,16 @@ void Wpa2Sniffer::Sniff() {
     pcap_.Loop([=](const uint8_t* pkt, int len) {
         this->HandleCapturedPacket(pkt, len);
     });
+
+    // Send the stop signal (length == -1) to the thread.
+    Buffer* buf = new Buffer;
+    buf->length = -1;
+    queue_.Push(buf);
+    th.join();
+}
+
+void Wpa2Sniffer::Stop() {
+    pcap_.BreakLoop();
 }
 
 void Wpa2Sniffer::SetBssidFilter(const std::string& bssid) {
@@ -358,6 +372,11 @@ void Wpa2Sniffer::HandleDecryptedPackets() {
         while ((buf = queue_.Pop()) == nullptr) {
             std::chrono::microseconds dura(50);
             std::this_thread::sleep_for(dura);
+        }
+
+        if (buf->length == -1) { // Stop signal
+            delete buf;
+            return;
         }
 
         if (buf->length >= 0x24 &&   // Enough space for LLC/IP/UDP headers
