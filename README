@@ -8,3 +8,7 @@ is no proper way to fix it (DRH streams almost only P-frames).
 
 The code implements a very simple WPA2 sniffer using libpcap to sniff raw
 802.11 packets.
+
+This project is not maintained anymore and was nothing more than an experiment.
+If someone wants to take it over and try to make it more useful (unlikely this
+could happen), patches are welcomed.
