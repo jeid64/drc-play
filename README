@@ -1,0 +1,10 @@
+drc-cap - a passive DRC<->DRH sniffer
+=====================================
+
+drc-cap is a toy project that tries to sniff the audio and video data sent from
+DRH to DRC and show it on a PC. In practice it works well until a video packet
+is missed/lost - when this happens the video stream will be corrupted and there
+is no proper way to fix it (DRH streams almost only P-frames).
+
+The code implements a very simple WPA2 sniffer using libpcap to sniff raw
+802.11 packets.
