@@ -129,19 +129,17 @@ void VstrmProtocol::HandlePacket(const uint8_t* data, int len) {
     if (len < 16) {
         return;
     }
-
     int magic = data[0] >> 4;
     int packet_type = (data[0] >> 2) & 3;
     int seq_id = ((data[0] & 3) << 8) | data[1];
     //bool init = (data[2] >> 7) & 1;
-    //bool frame_begin = (data[2] >> 6) & 1;
+    bool frame_begin = (data[2] >> 6) & 1;
     //bool chunk_end = (data[2] >> 5) & 1;
     bool frame_end = (data[2] >> 4) & 1;
     bool has_timestamp = (data[2] >> 3) & 1;
     //int payload_size = ((data[2] & 7) << 8) | data[3];
     //uint32_t timestamp = (data[4] << 24) | (data[5] << 16) |
     //                     (data[6] << 8) | data[7];
-
     if (magic != 0xF) {
         return;
     }
@@ -156,7 +154,11 @@ void VstrmProtocol::HandlePacket(const uint8_t* data, int len) {
 
     if (!CheckSequenceId(seq_id)) {
         curr_frame_->broken = true;
-        RequestIFrame();
+    }
+
+    if (frame_begin) {
+        printf("Frame began.\n");
+        curr_frame_->frame_begin = true;
     }
 
     // Check the extended header for the IDR option.
@@ -169,11 +171,15 @@ void VstrmProtocol::HandlePacket(const uint8_t* data, int len) {
         }
     }
 
-    curr_frame_->data.insert(curr_frame_->data.end(), data + 16, data + len);
-    if (frame_end) {
+    if (curr_frame_->frame_begin) {
+        curr_frame_->data.insert(curr_frame_->data.end(), data + 16, data + len);
+    }
+
+    if (frame_end && curr_frame_->frame_begin) {
         if (!curr_frame_->broken) {
             queue_.Push(curr_frame_);
         } else {
+            printf("Frame_end delete.");
             delete curr_frame_;
         }
         curr_frame_ = new FrameBuffer;

@@ -52,10 +52,12 @@ struct FrameBuffer {
     FrameBuffer* next;
     bool is_idr;
     bool broken;
+    bool frame_begin;
+    bool frame_end;
     bool stop_signal;
     std::vector<uint8_t> data;
 
-    FrameBuffer() : next(nullptr), is_idr(false), broken(false),
+    FrameBuffer() : next(nullptr), is_idr(false), broken(false), frame_begin(false), frame_end(false),
                     stop_signal(false) {}
 };
 

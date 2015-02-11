@@ -32,44 +32,81 @@
 #include <signal.h>
 #include <string>
 
-static Wpa2Sniffer* p_sniffer = nullptr;
 
-static void quit_handler(int) {
-    if (p_sniffer) {
-        p_sniffer->Stop();
-    }
+#include <arpa/inet.h>
+#include <cstring>
+#include <fcntl.h>
+#include <netinet/in.h>
+#include <string>
+#include <sys/socket.h>
+#include <unistd.h>
+#include <vector>
+#include <stdlib.h>
+#include <stdio.h>
+#include "vstrm.h"
+#include "sdl-handler.h"
+
+void send_msg(){
+
+  int sock_fd_;
+
+  sockaddr_in sin;
+  memset(&sin, 0, sizeof (sin));
+  sin.sin_family = AF_INET;
+  sin.sin_port = htons(50010);
+  inet_aton("192.168.1.10", &sin.sin_addr);
+
+  sock_fd_ = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+  if (sock_fd_ == -1) {
+    printf("Fuck \n");
+  }
+
+
+    sockaddr_in sender;
+    socklen_t sender_len = sizeof (sender);
+    int msg_max_size = 2048;
+    const char* message = "\1\0\0\0";
+    sendto(sock_fd_, message,sizeof(message),0,reinterpret_cast<sockaddr*>(&sender),sender_len);
+    printf("sent\n");
+
 }
 
 int main(int argc, char** argv) {
-    if (argc != 4) {
-        fprintf(stderr, "usage: %s <wlanX> <bssid> <psk>\n", argv[0]);
-        return 1;
-    }
-
-    std::string iface = argv[1];
-    std::string bssid = argv[2];
-    std::string psk = argv[3];
-
-    Wpa2Sniffer sniffer(iface, bssid, psk);
     VstrmProtocol vstrm;
-    AstrmProtocol astrm;
-    CmdProtocol cmd;
-    PortaudioHandler portaudio;
     SdlHandler sdl;
 
     vstrm.RegisterVideoHandler(&sdl);
-    vstrm.SetPacketInjector(&sniffer);
+    //AstrmProtocol astrm;
+    //PortaudioHandler portaudio;
+    //astrm.RegisterAudioHandler(&portaudio);
 
-    astrm.RegisterAudioHandler(&portaudio);
+    send_msg();
+    int sock_fd_;
 
-    sniffer.RegisterProtocolHandler(kDrcVstrmPort, &vstrm);
-    sniffer.RegisterProtocolHandler(kDrcAstrmPort, &astrm);
-    sniffer.RegisterProtocolHandler(kDrcCmdPort, &cmd);
+    sockaddr_in sin;
+    memset(&sin, 0, sizeof (sin));
+    sin.sin_family = AF_INET;
+    sin.sin_port = htons(50120);
+    inet_aton("192.168.1.11", &sin.sin_addr);
 
-    p_sniffer = &sniffer;
-    signal(SIGINT, quit_handler);
-    signal(SIGQUIT, quit_handler);
-    sniffer.Sniff();
+    sock_fd_ = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if (sock_fd_ == -1) {
+        return false;
+    }
 
-    return 0;
+    if (bind(sock_fd_, reinterpret_cast<sockaddr*>(&sin), sizeof (sin)) == -1) {
+        return false;
+    }
+
+    sockaddr_in sender;
+    socklen_t sender_len = sizeof (sender);
+    int msg_max_size = 2048;
+    uint8_t* data = (uint8_t*) malloc(2048);
+    while (1) {
+        int size = recvfrom(sock_fd_, data, msg_max_size, 0,
+        reinterpret_cast<sockaddr*>(&sender), &sender_len);
+        printf("size : %d\n", size);
+        vstrm.HandlePacket(data, size);
+        //astrm.HandlePacket(data, size);
+    }
 }
