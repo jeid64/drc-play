@@ -105,7 +105,6 @@ int main(int argc, char** argv) {
     while (1) {
         int size = recvfrom(sock_fd_, data, msg_max_size, 0,
         reinterpret_cast<sockaddr*>(&sender), &sender_len);
-        printf("size : %d\n", size);
         vstrm.HandlePacket(data, size);
         //astrm.HandlePacket(data, size);
     }

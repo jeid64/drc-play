@@ -70,7 +70,7 @@ class H264Decoder {
       // TODO(delroth): cleanup
   }
 
-  void DecodeFrame(const std::vector<uint8_t>& nalu,
+  int DecodeFrame(const std::vector<uint8_t>& nalu,
                    std::vector<VideoPixel>& pixels) {
       packet_.data = const_cast<uint8_t*>(&nalu[0]);
       packet_.size = nalu.size();
@@ -80,6 +80,7 @@ class H264Decoder {
                                          &packet_);
       if (length != (int)nalu.size()) {
           fprintf(stderr, "error: avcodec_decode_video2\n");
+          return -1;
       }
 
       if (got_frame) {
@@ -89,7 +90,9 @@ class H264Decoder {
           pixels.resize(out_frame_->linesize[0] * 480);
           memcpy((uint8_t*)&pixels[0], out_frame_->data[0],
                  out_frame_->linesize[0] * 480);
+          return 0;
       }
+      return -1;
   }
 
   private:
@@ -157,7 +160,6 @@ void VstrmProtocol::HandlePacket(const uint8_t* data, int len) {
     }
 
     if (frame_begin) {
-        printf("Frame began.\n");
         curr_frame_->frame_begin = true;
     }
 
@@ -222,7 +224,12 @@ void VstrmProtocol::HandleEncodedFrames() {
         EncapsulateH264(fr, nal_encapsulated);
 
         std::vector<VideoPixel> pixels;
-        h264decoder_->DecodeFrame(nal_encapsulated, pixels);
+        int ret = h264decoder_->DecodeFrame(nal_encapsulated, pixels);
+        if (ret == -1) {
+            fprintf(stderr, "Return code negative, delete frame. \n");
+            delete fr;
+            return;
+        }
 
         SendVideoFrame(pixels, 854);
 
