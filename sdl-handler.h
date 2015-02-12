@@ -34,6 +34,10 @@ class SdlHandler : public VideoHandler {
 
     virtual void HandleVideoFrame(const std::vector<VideoPixel>& pixels,
                                   int width);
+
+    void fpsinit();
+
+    void fpsthink();
 };
 
 #endif
