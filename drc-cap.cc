@@ -27,7 +27,7 @@
 #include "portaudio-handler.h"
 #include "sdl-handler.h"
 #include "vstrm.h"
-#include "wpa2-sniffer.h"
+#include "udp-sniffer.h"
 
 #include <signal.h>
 #include <string>
@@ -80,36 +80,8 @@ int main(int argc, char** argv) {
     SdlHandler sdl;
 
     vstrm.RegisterVideoHandler(&sdl);
-    //AstrmProtocol astrm;
-    //PortaudioHandler portaudio;
-    //astrm.RegisterAudioHandler(&portaudio);
-
+    UdpSniffer udpsniffer;
+    udpsniffer.RegisterProtocolHandler(50210, &vstrm);
     send_msg();
-    int sock_fd_;
-
-    sockaddr_in sin;
-    memset(&sin, 0, sizeof (sin));
-    sin.sin_family = AF_INET;
-    sin.sin_port = htons(50120);
-    inet_aton("192.168.1.11", &sin.sin_addr);
-
-    sock_fd_ = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    if (sock_fd_ == -1) {
-        return false;
-    }
-
-    if (bind(sock_fd_, reinterpret_cast<sockaddr*>(&sin), sizeof (sin)) == -1) {
-        return false;
-    }
-
-    sockaddr_in sender;
-    socklen_t sender_len = sizeof (sender);
-    int msg_max_size = 2048;
-    uint8_t* data = (uint8_t*) malloc(2048);
-    while (1) {
-        int size = recvfrom(sock_fd_, data, msg_max_size, 0,
-        reinterpret_cast<sockaddr*>(&sender), &sender_len);
-        vstrm.HandlePacket(data, size);
-        //astrm.HandlePacket(data, size);
-    }
+    udpsniffer.Sniff();
 }

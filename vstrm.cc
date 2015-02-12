@@ -31,6 +31,21 @@ extern "C" {
 #include <libswscale/swscale.h>
 }
 
+// send_msg
+
+#include <arpa/inet.h>
+#include <cstring>
+#include <fcntl.h>
+#include <netinet/in.h>
+#include <string>
+#include <sys/socket.h>
+#include <unistd.h>
+#include <vector>
+#include <stdlib.h>
+#include <stdio.h>
+#include "vstrm.h"
+#include "sdl-handler.h"
+
 class H264Decoder {
   public:
     H264Decoder() {
@@ -168,7 +183,6 @@ void VstrmProtocol::HandlePacket(const uint8_t* data, int len) {
     for (int i = 8; i < 16; ++i) {
         if (data[i] == 0x80) {
             curr_frame_->is_idr = true;
-            printf("Got IDR!\n");
             break;
         }
     }
@@ -181,7 +195,6 @@ void VstrmProtocol::HandlePacket(const uint8_t* data, int len) {
         if (!curr_frame_->broken) {
             queue_.Push(curr_frame_);
         } else {
-            printf("Frame_end delete.");
             delete curr_frame_;
         }
         curr_frame_ = new FrameBuffer;
@@ -195,9 +208,39 @@ bool VstrmProtocol::CheckSequenceId(int seq_id) {
     } else if (expected_seq_id_ != seq_id) {
         fprintf(stderr, "expected: %d seqid: %d\n", expected_seq_id_, seq_id);
         ret = false;
+        send_msg();
     }
     expected_seq_id_ = (seq_id + 1) & 0x3ff;
     return ret;
+}
+
+void VstrmProtocol::send_msg() {
+    struct sockaddr_in si_other;
+    int s, slen=sizeof(si_other);
+
+    const char* message =  "\1\0\0\0";
+
+    if ( (s=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
+    {
+        fprintf(stderr, "Failed to open MSG stream socket. \n");
+    }
+
+    memset((char *) &si_other, 0, sizeof(si_other));
+    si_other.sin_family = AF_INET;
+    si_other.sin_port = htons(50010); // Wii U MSG port.
+
+    if (inet_aton("192.168.1.10" , &si_other.sin_addr) == 0)
+    {
+        fprintf(stderr, "inet_aton() failed\n");
+        exit(1);
+    }
+
+    if (sendto(s, message, sizeof(uint32_t) , 0 , (struct sockaddr *) &si_other, slen)==-1)
+    {
+        fprintf(stderr, "Failed to send IDR request message.\n");
+    }
+
+    close(s);
 }
 
 void VstrmProtocol::SendVideoFrame(const std::vector<VideoPixel>& pixels,

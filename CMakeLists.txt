@@ -29,7 +29,9 @@ add_executable(drc-cap
                vstrm.cc
                vstrm.h
                wpa2-sniffer.cc
-               wpa2-sniffer.h)
+               wpa2-sniffer.h
+               udp-sniffer.cc
+               udp-sniffer.h)
 
 find_package(PCAP REQUIRED)
 include_directories(${PCAP_INCLUDE_DIR})

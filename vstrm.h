@@ -75,6 +75,7 @@ class VstrmProtocol : public ProtocolHandler {
 
   private:
     bool CheckSequenceId(int seq_id);
+    void send_msg();
     void RequestIFrame();
 
     void SendVideoFrame(const std::vector<VideoPixel>& pixels, int width);
