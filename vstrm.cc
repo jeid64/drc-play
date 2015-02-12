@@ -220,11 +220,18 @@ void VstrmProtocol::HandleEncodedFrames() {
 
         std::vector<uint8_t> nal_encapsulated;
         EncapsulateH264(fr, nal_encapsulated);
+        uint8_t* a = &nal_encapsulated[0];
+        size_t length = nal_encapsulated.size();
+        write(1, a, sizeof(uint8_t) * length);
+        //std::vector<VideoPixel> pixels;
+        //int ret = h264decoder_->DecodeFrame(nal_encapsulated, pixels);
+        //if (ret == -1) {
+        //    fprintf(stderr, "Return code negative, delete frame. \n");
+        //    delete fr;
+        //    return;
+        //}
 
-        std::vector<VideoPixel> pixels;
-        h264decoder_->DecodeFrame(nal_encapsulated, pixels);
-
-        SendVideoFrame(pixels, 854);
+        //SendVideoFrame(pixels, 854);
 
         delete fr;
     }
