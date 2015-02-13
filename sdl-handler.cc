@@ -49,7 +49,7 @@ void SdlHandler::HandleVideoFrame(const std::vector<VideoPixel>& pixels,
     SDL_UnlockSurface(surf);
     SDL_Flip(surf);
     fpsthink();
-    //printf("FPS %f\n", framespersecond);
+    printf("FPS %f\n", framespersecond);
 }
 
 // How many frames time values to keep
