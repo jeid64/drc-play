@@ -8,6 +8,7 @@
 #include <cstdio>
 #include <cstring>
 #include <thread>
+#include <signal.h>
 
 // Network
 #include <arpa/inet.h>
@@ -31,6 +32,12 @@ UdpSniffer::UdpSniffer() {
 UdpSniffer::~UdpSniffer() {
 }
 
+bool received_quit_signal = false;
+
+static void quit_handler(int) {
+    received_quit_signal = true;
+}
+
 void UdpSniffer::RegisterProtocolHandler(uint16_t port,
                                           ProtocolHandler* handler) {
     handlers_[port] = handler;
@@ -38,7 +45,8 @@ void UdpSniffer::RegisterProtocolHandler(uint16_t port,
 
 void UdpSniffer::Sniff() {
     std::thread th(&UdpSniffer::HandleReceivedPackets, this);
-
+    signal(SIGINT, quit_handler);
+    signal(SIGQUIT, quit_handler);
     int sock_fd_;
 
     sockaddr_in sin;
@@ -60,7 +68,7 @@ void UdpSniffer::Sniff() {
     socklen_t sender_len = sizeof (sender);
     int msg_max_size = 4096;
 
-    while (1) {
+    while (1 && !received_quit_signal) {
         Buffer* buf = new Buffer;
         buf->data = (uint8_t*) malloc(4096);
 
