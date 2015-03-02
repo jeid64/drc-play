@@ -250,7 +250,34 @@ void VstrmProtocol::SendVideoFrame(const std::vector<VideoPixel>& pixels,
     }
 }
 
+void DumpH264Headers(FILE* fp) {
+typedef uint8_t u8;
+typedef uint16_t u16;
+typedef uint32_t u32;
+typedef uint64_t u64;
+
+typedef int8_t s8;
+typedef int16_t s16;
+typedef int32_t s32;
+typedef int64_t s64;
+
+typedef uint8_t byte;
+  u8 nal_start_code[] = { 0x00, 0x00, 0x00, 0x01 };
+  u8 gamepad_sps[] = { 0x67, 0x64, 0x00, 0x20, 0xac, 0x2b, 0x40,
+                       0x6c, 0x1e, 0xf3, 0x68 };
+  u8 gamepad_pps[] = { 0x68, 0xee, 0x06, 0x0c, 0xe8 };
+
+  fwrite(nal_start_code, sizeof (nal_start_code), 1, fp);
+  fwrite(gamepad_sps, sizeof (gamepad_sps), 1, fp);
+  fwrite(nal_start_code, sizeof (nal_start_code), 1, fp);
+  fwrite(gamepad_pps, sizeof (gamepad_pps), 1, fp);
+}
 void VstrmProtocol::HandleEncodedFrames() {
+  FILE* dump_file_;
+    dump_file_ = fopen("dump.h264", "wb");
+    if (dump_file_) {
+      DumpH264Headers(dump_file_);
+    }
     while (true) {
         FrameBuffer* fr;
         while ((fr = queue_.Pop()) == nullptr) {
@@ -266,16 +293,9 @@ void VstrmProtocol::HandleEncodedFrames() {
         std::vector<uint8_t> nal_encapsulated;
         EncapsulateH264(fr, nal_encapsulated);
 
-        std::vector<VideoPixel> pixels;
-        int ret = h264decoder_->DecodeFrame(nal_encapsulated, pixels);
-        if (ret == -1) {
-            fprintf(stderr, "Return code negative, delete frame. \n");
-            delete fr;
-            return;
-        }
-
-        SendVideoFrame(pixels, 854);
-
+        uint8_t* a = &nal_encapsulated[0];
+        size_t length = nal_encapsulated.size();
+        fwrite(a, length, 1, dump_file_);
         delete fr;
     }
 }
