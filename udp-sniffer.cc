@@ -1,5 +1,8 @@
 #include "udp-sniffer.h"
 
+#include <errno.h>
+
+
 #include "crc32.h"
 #include "polarssl-sha1.h"
 #include "protocol-handler.h"
@@ -50,20 +53,25 @@ void UdpSniffer::Sniff() {
     int sock_fd_;
 
     sockaddr_in sin;
-    memset(&sin, 0, sizeof (sin));
+    bzero(&sin, sizeof(sin));
+    //memset(&sin, 0, sizeof (sin));
     sin.sin_family = AF_INET;
+    printf("open socket\n");
     sin.sin_port = htons(50120);
-    inet_aton("192.168.1.11", &sin.sin_addr);
+    inet_aton("129.21.118.214", &sin.sin_addr);
 
     sock_fd_ = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (sock_fd_ == -1) {
         return;
     }
 
+    printf("before bind\n");
     if (bind(sock_fd_, reinterpret_cast<sockaddr*>(&sin), sizeof (sin)) == -1) {
+        printf("bind failed\n");
+        printf("socket error: %d, %s\n", errno, strerror(errno));
         return;
     }
-
+    printf("opened socket \n");
     sockaddr_in sender;
     socklen_t sender_len = sizeof (sender);
     int msg_max_size = 4096;
@@ -103,7 +111,7 @@ void UdpSniffer::HandleReceivedPackets() {
         }
 
         //ProtocolHandler* h = handlers_[dst_port];
-        uint16_t dst_port = 50210;
+        uint16_t dst_port = 50120;
         ProtocolHandler* h = handlers_[dst_port];
         h->HandlePacket(buf->data, buf->length);
 

@@ -77,11 +77,9 @@ void send_msg(){
 
 int main(int argc, char** argv) {
     VstrmProtocol vstrm;
-    SdlHandler sdl;
 
-    vstrm.RegisterVideoHandler(&sdl);
     UdpSniffer udpsniffer;
-    udpsniffer.RegisterProtocolHandler(50210, &vstrm);
+    udpsniffer.RegisterProtocolHandler(50120, &vstrm);
     send_msg();
     udpsniffer.Sniff();
 }
