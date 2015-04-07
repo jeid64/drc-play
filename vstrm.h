@@ -33,6 +33,7 @@
 #include <memory>
 #include <thread>
 #include <vector>
+#include <string>
 
 const uint16_t kDrcVstrmPort = 50120;
 
@@ -65,7 +66,7 @@ class H264Decoder;
 
 class VstrmProtocol : public ProtocolHandler {
   public:
-    VstrmProtocol();
+    VstrmProtocol(const std::string& myip, const std::string& repeaterip);
     virtual ~VstrmProtocol();
 
     void RegisterVideoHandler(VideoHandler* handler);
@@ -93,6 +94,8 @@ class VstrmProtocol : public ProtocolHandler {
 
     std::unique_ptr<H264Decoder> h264decoder_;
     PacketInjector* injector_;
+    std::string localip;
+    std::string remoteip;
 
     std::thread decoding_th_;
 };

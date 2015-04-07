@@ -46,35 +46,6 @@
 #include "vstrm.h"
 #include "sdl-handler.h"
 
-void send_msg(){
-    struct sockaddr_in si_other;
-    int s, i, slen=sizeof(si_other);
-
-    const char* message =  "\1\0\0\0";
-
-    if ( (s=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
-    {
-        fprintf(stderr, "Failed to open MSG stream socket. \n");
-    }
-
-    memset((char *) &si_other, 0, sizeof(si_other));
-    si_other.sin_family = AF_INET;
-    si_other.sin_port = htons(50010); // Wii U MSG port.
-
-    if (inet_aton("192.168.1.10" , &si_other.sin_addr) == 0)
-    {
-        fprintf(stderr, "inet_aton() failed\n");
-        exit(1);
-    }
-
-    if (sendto(s, message, sizeof(uint32_t) , 0 , (struct sockaddr *) &si_other, slen)==-1)
-    {
-        fprintf(stderr, "Failed to send IDR request message.\n");
-    }
-
-    close(s);
-}
-
 int main(int argc, char** argv) {
     if (argc != 3) {
         fprintf(stderr, "usage: %s <myip> <repeaterip> \n", argv[0]);
@@ -82,10 +53,9 @@ int main(int argc, char** argv) {
     }
     std::string myip = argv[1];
     std::string repeaterip = argv[2];
-    VstrmProtocol vstrm;
+    VstrmProtocol vstrm(myip, repeaterip);
 
     UdpSniffer udpsniffer(myip, repeaterip);
     udpsniffer.RegisterProtocolHandler(50120, &vstrm);
-    send_msg();
     udpsniffer.Sniff();
 }

@@ -29,8 +29,6 @@
 extern "C" {
 }
 
-// send_msg
-
 #include <arpa/inet.h>
 #include <cstring>
 #include <fcntl.h>
@@ -60,13 +58,16 @@ class H264Decoder {
   private:
 };
 
-VstrmProtocol::VstrmProtocol()
+VstrmProtocol::VstrmProtocol(const std::string& myip, const std::string& repeaterip)
     : decoded_frame_num_(0)
     , expected_seq_id_(-1)
     , curr_frame_(new FrameBuffer)
     , h264decoder_(new H264Decoder)
     , injector_(nullptr)
     , decoding_th_(&VstrmProtocol::HandleEncodedFrames, this) {
+
+    localip = myip;
+    remoteip = repeaterip;
 }
 
 VstrmProtocol::~VstrmProtocol() {
@@ -124,6 +125,7 @@ void VstrmProtocol::HandlePacket(const uint8_t* data, int len) {
     for (int i = 8; i < 16; ++i) {
         if (data[i] == 0x80) {
             curr_frame_->is_idr = true;
+            printf("got IDR.\n");
             break;
         }
     }
@@ -147,10 +149,11 @@ bool VstrmProtocol::CheckSequenceId(int seq_id) {
     if (expected_seq_id_ == -1) {
         expected_seq_id_ = seq_id;
     }
-    //else if (expected_seq_id_ != seq_id) {
-    //    fprintf(stderr, "expected: %d seqid: %d\n", expected_seq_id_, seq_id);
-    //    ret = false;
-    //}
+    else if (expected_seq_id_ != seq_id) {
+        fprintf(stderr, "expected: %d seqid: %d\n", expected_seq_id_, seq_id);
+        ret = false;
+        //send_msg();
+    }
     expected_seq_id_ = (seq_id + 1) & 0x3ff;
     return ret;
 }
@@ -170,7 +173,7 @@ void VstrmProtocol::send_msg() {
     si_other.sin_family = AF_INET;
     si_other.sin_port = htons(50010); // Wii U MSG port.
 
-    if (inet_aton("192.168.1.10" , &si_other.sin_addr) == 0)
+    if (inet_aton(remoteip.c_str() , &si_other.sin_addr) == 0)
     {
         fprintf(stderr, "inet_aton() failed\n");
         exit(1);
