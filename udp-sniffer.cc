@@ -27,8 +27,10 @@
 #include "vstrm.h"
 #include "sdl-handler.h"
 
-UdpSniffer::UdpSniffer() {
+UdpSniffer::UdpSniffer(const std::string& myip, const std::string& repeaterip) {
     // Constructor. Set Socket here.
+    localip = myip;
+    remoteip = repeaterip;
 
 }
 
@@ -58,7 +60,7 @@ void UdpSniffer::Sniff() {
     sin.sin_family = AF_INET;
     printf("open socket\n");
     sin.sin_port = htons(50120);
-    inet_aton("129.21.118.214", &sin.sin_addr);
+    inet_aton(localip.c_str(), &sin.sin_addr);
 
     sock_fd_ = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (sock_fd_ == -1) {

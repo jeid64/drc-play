@@ -18,7 +18,7 @@ class UdpSniffer{
   public:
     // Initializes a WPA2 sniffer to monitor access point <bssid> on interface
     // <iface>. The PSK used by the WPA2 network is specified by <psk>.
-    UdpSniffer();
+    UdpSniffer(const std::string& myip, const std::string& repeaterip);
 
     virtual ~UdpSniffer();
 
@@ -47,7 +47,8 @@ class UdpSniffer{
 
     // { src_port, protocol_handler }
     std::map<uint16_t, ProtocolHandler*> handlers_;
-
+    std::string localip;
+    std::string remoteip;
     // Queue for consumer-producer data exchange.
     LockedQueue<Buffer> queue_;
 };

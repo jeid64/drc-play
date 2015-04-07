@@ -76,9 +76,15 @@ void send_msg(){
 }
 
 int main(int argc, char** argv) {
+    if (argc != 3) {
+        fprintf(stderr, "usage: %s <myip> <repeaterip> \n", argv[0]);
+        return 1;
+    }
+    std::string myip = argv[1];
+    std::string repeaterip = argv[2];
     VstrmProtocol vstrm;
 
-    UdpSniffer udpsniffer;
+    UdpSniffer udpsniffer(myip, repeaterip);
     udpsniffer.RegisterProtocolHandler(50120, &vstrm);
     send_msg();
     udpsniffer.Sniff();
