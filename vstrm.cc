@@ -49,36 +49,6 @@ extern "C" {
 class H264Decoder {
   public:
     H264Decoder() {
-        avcodec_register_all();
-
-        av_init_packet(&packet_);
-
-        codec_ = avcodec_find_decoder(CODEC_ID_H264);
-        if (!codec_) {
-            fprintf(stderr, "error: avcodec_find_decoder failed\n");
-        }
-
-        context_ = avcodec_alloc_context3(codec_);
-        if (!context_) {
-            fprintf(stderr, "error: avcodec_alloc_context3 failed\n");
-        }
-
-        if (avcodec_open2(context_, codec_, nullptr) < 0) {
-            fprintf(stderr, "error: avcodec_open2 failed\n");
-        }
-
-        frame_ = avcodec_alloc_frame();
-        out_frame_ = avcodec_alloc_frame();
-
-        sws_context_ = sws_getContext(854, 480, PIX_FMT_YUV420P,
-                                      854, 480, PIX_FMT_BGR24,
-                                      SWS_FAST_BILINEAR, nullptr, nullptr,
-                                      nullptr);
-
-        int req_size = avpicture_get_size(PIX_FMT_BGR24, 854, 480);
-        uint8_t* buffer = new uint8_t[req_size];
-        avpicture_fill((AVPicture*)out_frame_, buffer, PIX_FMT_BGR24,
-                       854, 480);
     }
 
   ~H264Decoder() {
@@ -87,26 +57,6 @@ class H264Decoder {
 
   int DecodeFrame(const std::vector<uint8_t>& nalu,
                    std::vector<VideoPixel>& pixels) {
-      packet_.data = const_cast<uint8_t*>(&nalu[0]);
-      packet_.size = nalu.size();
-
-      int got_frame = 0;
-      int length = avcodec_decode_video2(context_, frame_, &got_frame,
-                                         &packet_);
-      if (length != (int)nalu.size()) {
-          fprintf(stderr, "error: avcodec_decode_video2\n");
-          return -1;
-      }
-
-      if (got_frame) {
-          sws_scale(sws_context_, frame_->data, frame_->linesize, 0, 480,
-                    out_frame_->data, out_frame_->linesize);
-
-          pixels.resize(out_frame_->linesize[0] * 480);
-          memcpy((uint8_t*)&pixels[0], out_frame_->data[0],
-                 out_frame_->linesize[0] * 480);
-          return 0;
-      }
       return -1;
   }
 

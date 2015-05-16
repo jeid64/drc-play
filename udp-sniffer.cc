@@ -68,6 +68,9 @@ void UdpSniffer::Sniff() {
     socklen_t sender_len = sizeof (sender);
     int msg_max_size = 4096;
 
+    uint16_t dst_port = 50210;
+    ProtocolHandler* h = handlers_[dst_port];
+
     while (1 && !received_quit_signal) {
         Buffer* buf = new Buffer;
         buf->data = (uint8_t*) malloc(4096);
@@ -75,7 +78,8 @@ void UdpSniffer::Sniff() {
         int size = recvfrom(sock_fd_, buf->data, msg_max_size, 0,
                                 reinterpret_cast<sockaddr*>(&sender), &sender_len);
         buf->length = size;
-        queue_.Push(buf);
+        //queue_.Push(buf);
+        h->HandlePacket(buf->data, buf->length);
 
     }
     // Send the stop signal (length == -1) to the thread.
@@ -90,24 +94,5 @@ void UdpSniffer::Stop() {
 }
 
 void UdpSniffer::HandleReceivedPackets() {
-    Buffer* buf;
-    while (true) {
-        while ((buf = queue_.Pop()) == nullptr) {
-            std::chrono::microseconds dura(50);
-            std::this_thread::sleep_for(dura);
-        }
-
-        if (buf->length == -1) { // Stop signal
-            delete buf;
-            return;
-        }
-
-        //ProtocolHandler* h = handlers_[dst_port];
-        uint16_t dst_port = 50210;
-        ProtocolHandler* h = handlers_[dst_port];
-        h->HandlePacket(buf->data, buf->length);
-
-        delete buf;
-    }
 }
 
