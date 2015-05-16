@@ -24,10 +24,6 @@ add_executable(drc-cap
                portaudio-handler.h
                protocol-handler.h
                queue.h
-               sdl-handler.cc
-               sdl-handler.h
-               vstrm.cc
-               vstrm.h
                wpa2-sniffer.cc
                wpa2-sniffer.h)
 

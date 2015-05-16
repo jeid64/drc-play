@@ -25,8 +25,6 @@
 #include "astrm.h"
 #include "cmd.h"
 #include "portaudio-handler.h"
-#include "sdl-handler.h"
-#include "vstrm.h"
 #include "wpa2-sniffer.h"
 
 #include <signal.h>
@@ -43,8 +41,6 @@
 #include <vector>
 #include <stdlib.h>
 #include <stdio.h>
-#include "vstrm.h"
-#include "sdl-handler.h"
 
 void send_msg(){
 
@@ -72,22 +68,21 @@ void send_msg(){
 }
 
 int main(int argc, char** argv) {
-    VstrmProtocol vstrm;
-    SdlHandler sdl;
+    //VstrmProtocol vstrm;
+    //SdlHandler sdl;
 
-    vstrm.RegisterVideoHandler(&sdl);
-    //AstrmProtocol astrm;
-    //PortaudioHandler portaudio;
-    //astrm.RegisterAudioHandler(&portaudio);
+    //vstrm.RegisterVideoHandler(&sdl);
+    AstrmProtocol astrm;
+    PortaudioHandler portaudio;
+    astrm.RegisterAudioHandler(&portaudio);
 
-    send_msg();
     int sock_fd_;
 
     sockaddr_in sin;
     memset(&sin, 0, sizeof (sin));
     sin.sin_family = AF_INET;
-    sin.sin_port = htons(50120);
-    inet_aton("192.168.1.11", &sin.sin_addr);
+    sin.sin_port = htons(50121);
+    inet_aton("129.21.154.221", &sin.sin_addr);
 
     sock_fd_ = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (sock_fd_ == -1) {
@@ -103,10 +98,11 @@ int main(int argc, char** argv) {
     int msg_max_size = 2048;
     uint8_t* data = (uint8_t*) malloc(2048);
     while (1) {
+        printf("got loop\n");
         int size = recvfrom(sock_fd_, data, msg_max_size, 0,
         reinterpret_cast<sockaddr*>(&sender), &sender_len);
         printf("size : %d\n", size);
-        vstrm.HandlePacket(data, size);
-        //astrm.HandlePacket(data, size);
+        //vstrm.HandlePacket(data, size);
+        astrm.HandlePacket(data, size);
     }
 }
