@@ -1,7 +1,4 @@
 #include "udp-sniffer.h"
-
-#include "crc32.h"
-#include "polarssl-sha1.h"
 #include "protocol-handler.h"
 
 #include <chrono>
@@ -22,7 +19,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "vstrm.h"
-#include "sdl-handler.h"
 
 UdpSniffer::UdpSniffer() {
     // Constructor. Set Socket here.
@@ -80,6 +76,8 @@ void UdpSniffer::Sniff() {
         buf->length = size;
         //queue_.Push(buf);
         h->HandlePacket(buf->data, buf->length);
+        free(buf->data);
+        delete buf;
 
     }
     // Send the stop signal (length == -1) to the thread.

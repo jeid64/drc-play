@@ -25,7 +25,6 @@
 #include "astrm.h"
 #include "cmd.h"
 #include "portaudio-handler.h"
-#include "sdl-handler.h"
 #include "vstrm.h"
 #include "udp-sniffer.h"
 
@@ -44,7 +43,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "vstrm.h"
-#include "sdl-handler.h"
 
 void send_msg(){
     struct sockaddr_in si_other;
@@ -77,9 +75,7 @@ void send_msg(){
 
 int main(int argc, char** argv) {
     VstrmProtocol vstrm;
-    SdlHandler sdl;
 
-    vstrm.RegisterVideoHandler(&sdl);
     UdpSniffer udpsniffer;
     udpsniffer.RegisterProtocolHandler(50210, &vstrm);
     send_msg();

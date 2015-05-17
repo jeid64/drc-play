@@ -25,7 +25,6 @@
 #ifndef __DRC_CAP_VSTRM_H_
 #define __DRC_CAP_VSTRM_H_
 
-#include "packet-injector.h"
 #include "protocol-handler.h"
 #include "queue.h"
 
@@ -69,7 +68,6 @@ class VstrmProtocol : public ProtocolHandler {
     virtual ~VstrmProtocol();
 
     void RegisterVideoHandler(VideoHandler* handler);
-    void SetPacketInjector(PacketInjector* injector);
 
     void HandlePacket(const uint8_t* data, int len);
 
@@ -92,7 +90,6 @@ class VstrmProtocol : public ProtocolHandler {
     LockedQueue<FrameBuffer> queue_;
 
     std::unique_ptr<H264Decoder> h264decoder_;
-    PacketInjector* injector_;
 
     std::thread decoding_th_;
 };

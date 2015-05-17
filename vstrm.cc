@@ -26,11 +26,6 @@
 
 #include <chrono>
 
-extern "C" {
-#include <libavcodec/avcodec.h>
-#include <libswscale/swscale.h>
-}
-
 // send_msg
 
 #include <arpa/inet.h>
@@ -44,7 +39,6 @@ extern "C" {
 #include <stdlib.h>
 #include <stdio.h>
 #include "vstrm.h"
-#include "sdl-handler.h"
 
 class H264Decoder {
   public:
@@ -61,12 +55,6 @@ class H264Decoder {
   }
 
   private:
-    AVPacket packet_;
-    AVCodec* codec_;
-    AVCodecContext* context_;
-    AVFrame* frame_;
-    AVFrame* out_frame_;
-    SwsContext* sws_context_;
 };
 
 VstrmProtocol::VstrmProtocol()
@@ -74,7 +62,6 @@ VstrmProtocol::VstrmProtocol()
     , expected_seq_id_(-1)
     , curr_frame_(new FrameBuffer)
     , h264decoder_(new H264Decoder)
-    , injector_(nullptr)
     , decoding_th_(&VstrmProtocol::HandleEncodedFrames, this) {
 }
 
@@ -87,10 +74,6 @@ VstrmProtocol::~VstrmProtocol() {
 
 void VstrmProtocol::RegisterVideoHandler(VideoHandler* handler) {
     handlers_.push_back(handler);
-}
-
-void VstrmProtocol::SetPacketInjector(PacketInjector* injector) {
-    injector_ = injector;
 }
 
 void VstrmProtocol::HandlePacket(const uint8_t* data, int len) {
@@ -325,12 +308,4 @@ void VstrmProtocol::RequestIFrame() {
     checksum = ~checksum & 0xFFFF;
     ip_packet[10] = checksum >> 8;
     ip_packet[11] = checksum & 0xFF;
-
-    // Send to our packet injector if it is set.
-    if (injector_) {
-        injector_->InjectPacket(PacketInjector::STA_TO_AP, ip_packet,
-                                sizeof (ip_packet));
-    } else {
-        fprintf(stderr, "warn: cannot inject, injector not set in vstrm\n");
-    }
 }

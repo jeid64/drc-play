@@ -1,4 +1,3 @@
-#include "packet-injector.h"
 #include "queue.h"
 
 #include <cstdint>
